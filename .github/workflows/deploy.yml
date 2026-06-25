@@ -1,0 +1,34 @@
+name: Live Multi-Container Deployment
+
+# 1. Yeh pipeline kab chalegi? Jab bhi hum main branch par code push karenge.
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step A: GitHub ke server par hamara code le kar aao
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # Step B: SSH ke zariye hamare Cloud Server (EC2) se connect karo
+      - name: Deploying Live to Cloud Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            # 1. Cloud server par project folder ke andar jao (agar nahi hai toh clone karo)
+            cd ~/Full-stack-application-deployment || git clone https://github.com/bishtprerna17-netizen/Full-stack-application-deployment.git ~/Full-stack-application-deployment && cd ~/Full-stack-application-deployment
+            
+            # 2. Latest code pull karo
+            git pull origin main
+            
+            # 3. Purane chal rahe containers ko down karo aur naye changes ke sath build karke up karo!
+            docker-compose down
+            docker-compose up -d --build
