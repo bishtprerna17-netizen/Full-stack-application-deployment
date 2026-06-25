@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  web-backend:
+    build: .
+    ports:
+      - "80:3000"
+    environment:
+      - DATABASE_URL=postgres://prerna_user:secure_password@db-container:5432/live_prod_db
+    depends_on:
+      - db-container
+
+  db-container:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=prerna_user
+      - POSTGRES_PASSWORD=secure_password
+      - POSTGRES_DB=live_prod_db
+    volumes:
+      - prod_db_volume:/var/lib/postgresql/data
+
+volumes:
+  prod_db_volume:
