@@ -9,20 +9,37 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// Initialize database table if it doesn't exist
-const initDb = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS visits (
-        id SERIAL PRIMARY KEY,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-  } catch (err) {
-    console.error("Database initialization failed:", err);
+// Initialize database table with a Retry Mechanism 🔄
+const initDb = async (retries = 5, delay = 3000) => {
+  while (retries) {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS visits (
+          id SERIAL PRIMARY KEY,
+          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      console.log('✅ Database & "visits" table checked/created successfully!');
+      break; // Agar table ban gayi toh loop se bahar nikal jao
+    } catch (err) {
+      retries -= 1;
+      console.error(`⚠️ Database connection failed. Retries left: ${retries}. Waiting ${delay/1000}s...`);
+      if (err) console.error("Error details:", err.message);
+      
+      if (retries === 0) {
+        console.error("❌ Could not connect to DB after multiple attempts. Exiting...");
+        process.exit(1); // App crash karke Docker ko batayega ki restart kare
+      }
+      // Ruko thodi der agli koshish se pehle
+      await new Promise(res => setTimeout(res, delay));
+    }
   }
 };
-initDb();
+
+// Shuruat mein thoda rukh kar DB init chalayenge taaki Postgres ready ho jaye
+setTimeout(() => {
+  initDb();
+}, 2000);
 
 app.get('/', async (req, res) => {
   try {
@@ -45,6 +62,6 @@ app.get('/', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, () => {                                                                                
   console.log(`Backend server running on port ${PORT}`);
 });
